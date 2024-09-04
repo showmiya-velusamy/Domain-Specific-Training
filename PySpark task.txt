@@ -1,0 +1,87 @@
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col
+
+# Initialize SparkSession
+spark = SparkSession.builder \
+    .appName("Product Sales Analysis") \
+    .getOrCreate()
+
+# Sample data for products
+products = [
+    (1, "Laptop", "Electronics", 50000),
+    (2, "Smartphone", "Electronics", 30000),
+    (3, "Table", "Furniture", 15000),
+    (4, "Chair", "Furniture", 5000),
+    (5, "Headphones", "Electronics", 2000),
+]
+
+# Sample data for sales transactions
+sales = [
+    (1, 1, 2),
+    (2, 2, 1),
+    (3, 3, 3),
+    (4, 1, 1),
+    (5, 4, 5),
+    (6, 2, 2),
+    (7, 5, 10),
+    (8, 3, 1),
+]
+
+# Define schema for DataFrames
+product_columns = ["ProductID", "ProductName", "Category", "Price"]
+sales_columns = ["SaleID", "ProductID", "Quantity"]
+
+# Create DataFrames
+product_df = spark.createDataFrame(products, schema=product_columns)
+sales_df = spark.createDataFrame(sales, schema=sales_columns)
+
+# Show the DataFrames
+print("Products DataFrame:")
+product_df.show()
+
+print("Sales DataFrame:")
+sales_df.show()
+
+#Join the DataFrames:** 
+#Join the `product_df` and `sales_df` DataFrames on `ProductID` to create a combined DataFrame with product and sales data.
+product_sales_df = product_df.join(sales_df, on="ProductID",how='inner')
+print("Product Sales DataFrame:")
+product_sales_df.show()
+
+#Calculate Total Sales Value:**
+#For each product, calculate the total sales value by multiplying the price by the quantity sold.
+total_sales_df = product_sales_df.withColumn(
+    "TotalSalesValue", 
+    col("Price") * col("Quantity")
+)
+total_sales_df.show()
+
+#Find the Total Sales for Each Product Category:**
+#Group the data by the `Category` column and calculate the total sales value for each product category
+total_sales_by_category_df = total_sales_df.groupBy("ProductName").sum("TotalSalesValue").withColumnRenamed("sum(TotalSalesValue)", "TotalSalesByCategory")
+print("Total Sales for Each Category:")
+total_sales_by_category_df.show()
+
+#Identify the Top-Selling Product:**
+#Find the product that generated the highest total sales value.
+top_sales_value_df = total_sales_by_category_df.orderBy(col("TotalSalesByCategory").desc()).limit(1)
+print("Top sales in all Category:")
+top_sales_value_df.show()
+
+#Sort the Products by Total Sales Value:**
+#Sort the products by total sales value in descending order.
+product_sales_value_df = total_sales_by_category_df.orderBy(col("TotalSalesByCategory").desc())
+print("Total sales value(Descending)!:")
+product_sales_value_df.show()
+
+#Count the Number of Sales for Each Product:**
+#Count the number of sales transactions for each product.
+sales_count_df = product_sales_df.groupBy("ProductName").count().withColumnRenamed("count", "SalesCount")
+print("Number of sales per Category:")
+sales_count_df.show()
+
+#Filter the Products with Total Sales Value Greater Than ₹50,000:**
+#Filter out the products that have a total sales value greater than ₹50,000.
+high_sales_df = total_sales_df.filter(col("TotalSalesValue") > 50000)
+print("Sales that have crossed more than 50000:")
+high_sales_df.show()

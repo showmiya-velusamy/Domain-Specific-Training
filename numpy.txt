@@ -1,0 +1,17 @@
+import numpy as np
+#create one dimensional array
+arr=np.array([1,2,3,4,5])
+print(arr)
+#reshape to a 2 x 3 array
+reshaped_arr=np.arange(6).reshape(2,3)
+print(reshaped_arr)
+#Element-wise addition
+arr_add=arr + 10
+print("Added each element by 10: ",arr_add)
+# Element-wise multiplication
+arr_mul = arr * 2
+print("Multiplied each element by 2:", arr_mul)
+# Slicing arrays
+sliced_arr = arr[1:4]
+# Get elements from index 1 to 3
+print("Sliced Array:", sliced_arr)

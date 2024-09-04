@@ -1,0 +1,95 @@
+from pyspark.sql import SparkSession
+
+# Initialize SparkSession
+spark = SparkSession.builder \
+    .appName("Key-Value Pair RDDs Exercise") \
+    .getOrCreate()
+
+# Access the SparkContext from the SparkSession
+sc = spark.sparkContext
+
+# Sample sales data
+sales_data = [
+    ("ProductA", 100),
+    ("ProductB", 150),
+    ("ProductA", 200),
+    ("ProductC", 300),
+    ("ProductB", 250),
+    ("ProductC", 100)
+]
+
+# Create an RDD from the sales_data list
+sales_rdd = sc.parallelize(sales_data)
+
+# Print the first few elements of the RDD
+print("Sales Data RDD:")
+print(sales_rdd.take(5))  # Take first 5 elements
+
+# Group the sales data by product name
+grouped_sales_rdd = sales_rdd.groupByKey()
+
+# Print the grouped data to understand its structure
+print("Grouped Sales Data:")
+for product, sales in grouped_sales_rdd.collect():
+    print(f"{product}: {list(sales)}")
+
+# Calculate total sales for each product
+total_sales_rdd = sales_rdd.reduceByKey(lambda a, b: a + b)
+
+# Print the total sales for each product
+print("Total Sales by Product:")
+for product, total_sales in total_sales_rdd.collect():
+    print(f"{product}: {total_sales}")
+
+# Sort products by total sales in descending order
+sorted_sales_rdd = total_sales_rdd.sortBy(lambda x: x[1], ascending=False)
+
+# Print the sorted list of products with their sales amounts
+for product, total_sales in sorted_sales_rdd.collect():
+    print(f"{product}: {total_sales}")
+
+# Filter products with total sales greater than 200
+high_sales_rdd = total_sales_rdd.filter(lambda x: x[1] > 200)
+
+# Print the products that meet this condition
+for product, total_sales in high_sales_rdd.collect():
+    print(f"{product}: {total_sales}")
+    
+# Sample regional sales data
+regional_sales_data = [
+    ("ProductA", 50),
+    ("ProductC", 150)
+]
+
+# Create an RDD from the regional_sales_data list
+regional_sales_rdd = sc.parallelize(regional_sales_data)
+
+# Print the first few elements of the regional sales RDD
+print("Regional Sales Data RDD:")
+print(regional_sales_rdd.take(5))  # Take first 5 elements
+
+# Union the sales data and regional sales data RDDs
+combined_sales_rdd = sales_rdd.union(regional_sales_rdd)
+
+# Print the combined data
+print("Combined Sales Data:")
+for product, sales in combined_sales_rdd.collect():
+    print(f"{product}: {sales}")
+
+#Count the number of distinct products
+distinct_products_count = sales_rdd.map(lambda x: x[0]).distinct().count()
+print(f"Number of distinct products: {distinct_products_count}")
+
+#Identify the product with maximum sales
+total_sales_rdd = sales_rdd.reduceByKey(lambda a, b: a + b)
+max_sales_product = total_sales_rdd.reduce(lambda a, b: a if a[1] > b[1] else b)
+print(f"Product with maximum sales: {max_sales_product[0]} with sales amount: {max_sales_product[1]}")
+
+# Challenge Task: Calculate the average sales per product
+sales_count_rdd = sales_rdd.mapValues(lambda x: (x, 1)) \
+    .reduceByKey(lambda a, b: (a[0] + b[0], a[1] + b[1]))
+average_sales_rdd = sales_count_rdd.mapValues(lambda x: x[0] / x[1])
+
+print("Average sales per product:")
+for product, avg_sales in average_sales_rdd.collect():
+    print(f"{product}: {avg_sales:.2f}")

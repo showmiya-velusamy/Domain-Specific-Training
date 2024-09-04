@@ -1,0 +1,72 @@
+from pyspark.sql import SparkSession
+import pandas as pd
+from datetime import datetime 
+
+# Sample sales data
+data = {
+       "TransactionID": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+       "CustomerID": [101, 102, 103, 101, 104, 102, 103, 104, 101, 105],
+       "ProductID": [501, 502, 501, 503, 504, 502, 503, 504, 501, 505],
+       "Quantity": [2, 1, 4, 3, 1, 2, 5, 1, 2, 1],
+       "Price": [150.0, 250.0, 150.0, 300.0, 450.0, 250.0, 300.0, 450.0, 150.0, 550.0],
+       "Date": [
+           datetime(2024, 9, 1),
+           datetime(2024, 9, 1),
+           datetime(2024, 9, 2),
+           datetime(2024, 9, 2),
+           datetime(2024, 9, 3),
+           datetime(2024, 9, 3),
+           datetime(2024, 9, 4),
+           datetime(2024, 9, 4),
+           datetime(2024, 9, 5),
+           datetime(2024, 9, 5)
+       ]
+   }
+# Create a DataFrame
+df = pd.DataFrame(data)
+# Save the DataFrame to a CSV file
+df.to_csv('sales_data.csv', index=False)
+print("Sample sales dataset has been created and saved as 'sales_data.csv'.")
+
+# Initialize SparkSession
+spark = SparkSession.builder \
+    .appName("Sales Dataset Analysis") \
+    .getOrCreate()
+
+
+sales_df = spark.read.csv('sales_data.csv', header=True, inferSchema=True)
+sales_df.printSchema()
+
+#Show the First Few Rows:* - Display the first 5 rows of the DataFrame.
+sales_df.show(5)
+
+#Get Summary Statistics:*- Get summary statistics for numeric columns (Quantity and Price).
+sales_df.describe(['Quantity', 'Price']).show()
+
+#Calculate the Total Sales Value for Each Transaction:Add a new column called TotalSales, calculated by multiplying Quantity by Price.
+sales_df = sales_df.withColumn("TotalSales", sales_df["Quantity"] * sales_df["Price"])
+sales_df.show()
+
+#Group By ProductID and Calculate Total Sales Per Product:Group the data by ProductID and calculate the total sales for each product.
+total_sales_per_product = sales_df.groupBy("ProductID").sum("TotalSales")
+total_sales_per_product.show()
+
+#Identify the Top-Selling Product:Find the product that generated the highest total sales.
+top_selling_product = total_sales_per_product.orderBy("sum(TotalSales)", ascending=False).first()
+print(top_selling_product)
+
+#Calculate the Total Sales by Date:Group the data by Date and calculate the total sales for each day.
+total_sales_per_date = sales_df.groupBy("Date").sum("TotalSales")
+total_sales_per_date.show()
+
+#Filter High-Value Transactions:Filter the transactions to show only those where the total sales value is greater than ₹500.
+high_value_transactions = sales_df.filter(sales_df["TotalSales"] > 500)
+high_value_transactions.show()
+
+#Identify Repeat Customers:*- Count how many times each customer has made a purchase and display the customers who have made more than one purchase.
+repeat_customers = sales_df.groupBy("CustomerID").count().filter("count > 1")
+repeat_customers.show()
+
+#Calculate the Average Sale Price Per Product:Calculate the average price per unit for each product and display the results.
+avg_price_per_product = sales_df.groupBy("ProductID").avg("Price")
+avg_price_per_product.show()
